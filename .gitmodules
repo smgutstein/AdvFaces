@@ -4,3 +4,6 @@
 [submodule "mtcnn"]
 	path = mtcnn
 	url = https://github.com/smgutstein/mtcnn.git
+[submodule "tensorflow_vgg"]
+	path = tensorflow_vgg
+	url = https://github.com/smgutstein/tensorflow-vgg.git
