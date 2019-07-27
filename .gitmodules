@@ -1,12 +1,15 @@
 [submodule "foolbox"]
 	path = foolbox
 	url = https://github.com/smgutstein/foolbox.git
+	master = master
 [submodule "mtcnn"]
 	path = mtcnn
 	url = https://github.com/smgutstein/mtcnn.git
+	master = master
 [submodule "tensorflow_vgg"]
 	path = tensorflow_vgg
 	url = https://github.com/smgutstein/tensorflow-vgg.git
+	master = master
 [mtcnn]
 	master = master
 [foolbox]
