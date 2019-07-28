@@ -2,10 +2,13 @@ import argparse
 import cv2
 import foolbox.foolbox as foolbox
 import importlib
+import inspect
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 from PIL import Image
 import skimage
+import sys
 import tensorflow as tf
 from tensorflow.contrib.slim.nets import vgg
 from tensorflow_vgg.vgg16 import Vgg16
@@ -24,8 +27,27 @@ class Adversary_Details(object):
         self.images = tf.placeholder(tf.float32, shape=(None, 224, 224, 3))
         self.vgg16_net = Vgg16()
         self.vgg16_net.build(self.images)
-        temp = importlib.import_module("foolbox.foolbox.attacks")
-        self.attack_class = getattr(temp, attack_name)
+        poss_attacks = self.get_attacks()
+        if attack_name in poss_attacks:
+            self.attack_class = poss_attacks[attack_name]
+        else:
+            print (attack_name, "is unknown attack")
+            sys.exit("\n\n")
+        #temp = importlib.import_module("foolbox.foolbox.attacks")
+        #self.attack_class = getattr(temp, attack_name)
+
+    def get_attacks(self):
+        attack_module = importlib.import_module("foolbox.foolbox.attacks")
+        attack_mod_classes = [xx
+                              for xx in inspect.getmembers(attack_module)
+                              if inspect.isclass(xx[1])]
+        temp_dict = {xx[0]:xx[1] for xx in attack_mod_classes}
+        attack_dict = {xx:temp_dict[xx]
+                       for xx in temp_dict
+                       if (issubclass(temp_dict[xx], temp_dict['Attack']) and xx != 'Attack')}
+
+        return attack_dict
+
         
 
     # returns image of shape [224, 224, 3]
@@ -81,22 +103,43 @@ if __name__ == "__main__":
         category2 = ' '.join(detailer.synset[idx2].split()[1:])
         conf2 = foolbox.utils.softmax(pre_softmax2)
 
-        diff = np.abs(detailer.image-adv_image)*50
-
+        diff = np.abs(detailer.image-adv_image)
+        hist_image = 255.0 * diff
+        hist_image = hist_image.astype('int16')
+        hist = hist_image.flatten()
+        hist_max = (int(hist.max()/10)+1)*10
+        plt.hist(hist, range(hist_max))
+        plt.yscale('log')
+        plt.xlabel("Diff")
+        plt.ylabel('Count')
+        plt.savefig('temp.png')
+        hist_img = cv2.imread("temp.png")
+        print("Shape =", hist_img.shape)
+        
+        diff_max = diff.max()
+        mult_factor = int(detailer.image.max()/diff.max())
+        diff *= mult_factor
+        
+        print("Max Diff:", diff_max)
         print("Raw Image:", idx, category, conf[idx])
         print("Adv Image:", idx2, category2, conf2[idx2])
-
+        diff_title_str = "Difference (X" + str(mult_factor) +")"
+        
         cv2.namedWindow("Original Image")
         cv2.namedWindow("Adversarial Image")
-        cv2.namedWindow("Difference (X50)")
+        cv2.namedWindow(diff_title_str)
         cv2.namedWindow("Adversarial Overlay")
+        cv2.namedWindow("Histogram")
 
         cv2.moveWindow("Original Image", 10,250)
         cv2.moveWindow("Adversarial Image", 400,250)
-        cv2.moveWindow("Difference (X50)", 800,250)
+        cv2.moveWindow(diff_title_str, 800,250)
         cv2.moveWindow("Adversarial Overlay", 1200,250)
+        cv2.moveWindow("Histogram", 1600,250)
 
-        cv2.createTrackbar('Alpha','Adversarial Overlay',int(detailer.alpha*100),100,detailer.change_alpha)        
+        cv2.createTrackbar('Alpha','Adversarial Overlay',
+                           int(detailer.alpha*100),
+                           100, detailer.change_alpha)        
         
         while True:
             k = cv2.waitKey(1) &0xFF
@@ -109,8 +152,9 @@ if __name__ == "__main__":
 
             cv2.imshow("Original Image",detailer.image[:,:,::-1])
             cv2.imshow("Adversarial Image",adv_image[:,:,::-1])
-            cv2.imshow("Difference (X50)",diff[:,:,::-1])
+            cv2.imshow(diff_title_str,diff[:,:,::-1])
             cv2.imshow("Adversarial Overlay",ref_img[:,:,::-1])
+            cv2.imshow("Histogram", hist_img)
 
             if k == 27 or chr(k) == 'q':
                 break
