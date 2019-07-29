@@ -80,6 +80,7 @@ class Adversary_Details(object):
         plt.ylabel('Count')
         plt.title(hist_name)
         plt.savefig('temp.png')
+        plt.clf()
         self.hist_image = cv2.imread("temp.png")
 
     def save_results(self, curr_attack):     
@@ -151,10 +152,12 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     det = Adversary_Details(args["image"], args["path"])
     attack_dict = det.get_attacks()
+    
     with tf.Session() as session:
-        det.reset("FGSM")
-        det.make_attack()
-        det.make_histogram("FGSM")
-        det.save_results("FGSM")
+        for curr_attack in ["FGSM", "BIM", "PGD", "NewtonFoolAttack"]:
+            det.reset(curr_attack)
+            det.make_attack()
+            det.make_histogram(curr_attack)
+            det.save_results(curr_attack)
 
 
