@@ -27,6 +27,7 @@ class Adversary_Details(object):
         self.images = tf.placeholder(tf.float32, shape=(None, 224, 224, 3))
         self.vgg16_net = Vgg16()
         self.vgg16_net.build(self.images)
+        
         poss_attacks = self.get_attacks()
         if attack_name in poss_attacks:
             self.attack_class = poss_attacks[attack_name]
@@ -115,16 +116,17 @@ if __name__ == "__main__":
         attack = detailer.attack_class(model) 
         
         pre_softmax = model.forward_one(detailer.image)
-        idx = np.argmax(pre_softmax)
-        category = ' '.join(detailer.synset[idx].split()[1:])
         conf = foolbox.utils.softmax(pre_softmax)
+        idx = np.argmax(conf)
+        category = ' '.join(detailer.synset[idx].split()[1:])
+
 
         adv_image = attack(detailer.image, idx)
         pre_softmax2 = model.forward_one(adv_image)
-        idx2 = np.argmax(pre_softmax2)
-        category2 = ' '.join(detailer.synset[idx2].split()[1:])
         conf2 = foolbox.utils.softmax(pre_softmax2)
-
+        idx2 = np.argmax(conf2)
+        category2 = ' '.join(detailer.synset[idx2].split()[1:])
+ 
         diff = np.abs(detailer.image-adv_image)
         hist_image = 255.0 * diff
         hist_image = hist_image.astype('int16')

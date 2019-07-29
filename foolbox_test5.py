@@ -16,17 +16,17 @@ from tensorflow_vgg.vgg16 import Vgg16
 
 class Adversary_Details(object):
 
-    def __init__(self, img_name, path):
-        self.img_name = img_name
+    def __init__(self, image_name, path):
+        self.image_name = image_name
         self.path = path
-        self.image = self.load_image(os.path.join(path, img_name))
+        self.image = self.load_image(os.path.join(path, image_name))
         self.alpha = 0.75
         
         self.synset = [l.strip() for l in open("./test_data/synset.txt").readlines()]
 
         self.images = tf.placeholder(tf.float32, shape=(None, 224, 224, 3))
-        self.vgg16_net = Vgg16()
-        self.vgg16_net.build(self.images)
+        #self.vgg16_net = Vgg16()
+        #self.vgg16_net.build(self.images)
         
         self.poss_attacks = self.get_attacks()
 
@@ -34,47 +34,46 @@ class Adversary_Details(object):
         self.alpha = 0.75
         self.vgg16_net = Vgg16()
         self.vgg16_net.build(self.images)
-        with tf.Session() as session:
-            self.model = foolbox.models.TensorFlowModel(self.images,
-                                                        self.vgg16_net.fc8,
-                                                        (0, 255),
-                                                        self.vgg16_net)
-            self.attack = self.poss_attacks[curr_attack](self.model)
-            self.pre_softmax = self.model.forward_one(self.image)
-            self.idx = np.argmax(self.pre_softmax)
-            self.category = ' '.join(self.synset[self.idx].split()[1:])
-            self.conf = foolbox.utils.softmax(self.pre_softmax)
 
-            self.adv_image = self.attack(self.image, self.idx)
-            #self.pre_softmax2 = self.model.forward_one(self.adv_image)
+        self.model = foolbox.models.TensorFlowModel(self.images,
+                                                    self.vgg16_net.fc8,
+                                                    (0, 255),
+                                                    self.vgg16_net)
+        self.attack = self.poss_attacks[curr_attack](self.model)
+        self.pre_softmax = self.model.forward_one(self.image)
+        self.conf = foolbox.utils.softmax(self.pre_softmax)
+        self.idx = np.argmax(self.conf)
+        self.category = ' '.join(self.synset[self.idx].split()[1:])
+
 
 
     def make_attack(self):
         self.adv_image = self.attack(self.image, self.idx)
         self.pre_softmax2 = self.model.forward_one(self.adv_image)
-        self.idx2 = np.argmax(self.pre_softmax2)
-        self.category2 = ' '.join(self.synset[self.idx2].split()[1:])
         self.conf2 = foolbox.utils.softmax(self.pre_softmax2)
+        self.idx2 = np.argmax(self.conf2)
+        self.category2 = ' '.join(self.synset[self.idx2].split()[1:])
 
-        self.diff_image = np.abs(self.image - self.adv_image)
-        diff_max = self.diff_image.max()
-        mult_factor = int(self.image.max()/self.diff_image.max())
-        self.diff_image *= mult_factor
+        
+        self.diff = np.abs(self.image - self.adv_image)
+        diff_max = self.diff.max()
+        mult_factor = int(self.image.max()/self.diff.max())
+        self.diff_image = self.diff * mult_factor
 
         self.data_str = "Max Diff: " + str(diff_max) + '\n'
         self.data_str += "Raw Image:" + str(self.idx) + " -- " + str(self.category)
         self.data_str += " -- " + str(self.conf[self.idx]) + '\n'
         self.data_str += "Adv Image:" + str(self.idx2) + " -- " + str(self.category2)
-        self.data_str += " -- " + str(self.conf[self.idx2]) + '\n'
+        self.data_str += " -- " + str(self.conf2[self.idx2]) + '\n'
         self.data_str += "Mult Factor: " + str(mult_factor) + '\n'
 
 
-    def make_histogram(self):
+    def make_histogram(self, curr_attack):
         self.hist_image = 255.0 * self.diff
         self.hist_image = self.hist_image.astype('int16')
         hist = self.hist_image.flatten()
         hist_max = (int(hist.max()/10)+1)*10
-        hist_name = args["attack"] + " Histogram"
+        hist_name = curr_attack + " Histogram"
         plt.hist(hist, range(hist_max))
         plt.yscale('log')
         plt.xlabel("Diff")
@@ -83,23 +82,23 @@ class Adversary_Details(object):
         plt.savefig('temp.png')
         self.hist_image = cv2.imread("temp.png")
 
-    def save_results(self):     
+    def save_results(self, curr_attack):     
         base_path = os.path.dirname(os.path.abspath(__file__))
-        image_name = image_name.split('.')[0]
-        res_path = os.path.join(base_path, "results", image_name, attack)
+        image_name = self.image_name.split('.')[0]
+        res_path = os.path.join(base_path, "results", image_name, curr_attack)
         os.makedirs(res_path, exist_ok=True)
 
         for curr_img, out_file in [(self.image[:,:,::-1],"orig.png"),
-                                   (self.adv_image, "adv.png"),
-                                   (self.diff_image, "diff.png"),
-                                   (self.hist_image, "hist.png")]:
+                                   (self.adv_image[:,:,::-1], "adv.png"),
+                                   (self.diff_image[:,:,::-1], "diff.png"),
+                                   (self.hist_image[:,:,::-1], "hist.png")]:
             if int(curr_img.max()) <= 1.0:
                 curr_img = 255.0 * curr_img
             curr_img = curr_img.astype('int16')
             cv2.imwrite(os.path.join(res_path,out_file), curr_img)
             
         with open (os.path.join(res_path, "info.txt"), 'w') as f:
-            f.write(data_str)
+            f.write(self.data_str)
         print ("Saved results to", res_path)
 
 
@@ -152,10 +151,10 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     det = Adversary_Details(args["image"], args["path"])
     attack_dict = det.get_attacks()
-    #with tf.Session() as session:
-    det.reset("FGSM")
-    #det.make_attack()
-    #det.make_histogram()
-    #det.save_results()
+    with tf.Session() as session:
+        det.reset("FGSM")
+        det.make_attack()
+        det.make_histogram("FGSM")
+        det.save_results("FGSM")
 
 
