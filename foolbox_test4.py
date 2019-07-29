@@ -130,10 +130,12 @@ if __name__ == "__main__":
         hist_image = hist_image.astype('int16')
         hist = hist_image.flatten()
         hist_max = (int(hist.max()/10)+1)*10
+        hist_name = args["attack"] + " Histogram"
         plt.hist(hist, range(hist_max))
         plt.yscale('log')
         plt.xlabel("Diff")
         plt.ylabel('Count')
+        plt.title(hist_name)
         plt.savefig('temp.png')
         hist_img = cv2.imread("temp.png")
         print("Shape =", hist_img.shape)
@@ -155,13 +157,13 @@ if __name__ == "__main__":
         cv2.namedWindow("Adversarial Image")
         cv2.namedWindow(diff_title_str)
         cv2.namedWindow("Adversarial Overlay")
-        cv2.namedWindow("Histogram")
+        cv2.namedWindow(hist_name)
 
         cv2.moveWindow("Original Image", 10,250)
         cv2.moveWindow("Adversarial Image", 400,250)
         cv2.moveWindow(diff_title_str, 800,250)
         cv2.moveWindow("Adversarial Overlay", 1200,250)
-        cv2.moveWindow("Histogram", 1600,250)
+        cv2.moveWindow(hist_name, 1600,250)
 
         cv2.createTrackbar('Alpha','Adversarial Overlay',
                            int(detailer.alpha*100),
@@ -182,7 +184,7 @@ if __name__ == "__main__":
             cv2.imshow("Adversarial Image",adv_image[:,:,::-1])
             cv2.imshow(diff_title_str,diff[:,:,::-1])
             cv2.imshow("Adversarial Overlay",ref_img[:,:,::-1])
-            cv2.imshow("Histogram", hist_img)
+            cv2.imshow(hist_name, hist_img)
 
             if k == 27 or chr(k) == 'q':
                 #save_results(args["attack"], args["image"])
