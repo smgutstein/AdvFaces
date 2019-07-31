@@ -25,8 +25,6 @@ class Adversary_Details(object):
         self.synset = [l.strip() for l in open("./test_data/synset.txt").readlines()]
 
         self.images = tf.placeholder(tf.float32, shape=(None, 224, 224, 3))
-        #self.vgg16_net = Vgg16()
-        #self.vgg16_net.build(self.images)
         
         self.poss_attacks = self.get_attacks()
 
@@ -40,6 +38,7 @@ class Adversary_Details(object):
                                                     (0, 255),
                                                     self.vgg16_net)
         self.attack = self.poss_attacks[curr_attack](self.model)
+        self.data_str = ""
         self.pre_softmax = self.model.forward_one(self.image)
         self.conf = foolbox.utils.softmax(self.pre_softmax)
         self.idx = np.argmax(self.conf)
@@ -57,15 +56,15 @@ class Adversary_Details(object):
         
         self.diff = np.abs(self.image - self.adv_image)
         diff_max = self.diff.max()
-        mult_factor = int(self.image.max()/self.diff.max())
+        mult_factor = int(max(1, int(self.image.max()/self.diff.max())))
         self.diff_image = self.diff * mult_factor
 
-        self.data_str = "Max Diff: " + str(diff_max) + '\n'
-        self.data_str += "Raw Image:" + str(self.idx) + " -- " + str(self.category)
+        self.data_str = "   Max Diff: " + str(diff_max) + '\n'
+        self.data_str += "   Raw Image:" + str(self.idx) + " -- " + str(self.category)
         self.data_str += " -- " + str(self.conf[self.idx]) + '\n'
-        self.data_str += "Adv Image:" + str(self.idx2) + " -- " + str(self.category2)
+        self.data_str += "   Adv Image:" + str(self.idx2) + " -- " + str(self.category2)
         self.data_str += " -- " + str(self.conf2[self.idx2]) + '\n'
-        self.data_str += "Mult Factor: " + str(mult_factor) + '\n'
+        self.data_str += "   Mult Factor: " + str(mult_factor) + '\n'
 
 
     def make_histogram(self, curr_attack):
@@ -97,6 +96,7 @@ class Adversary_Details(object):
                 curr_img = 255.0 * curr_img
             curr_img = curr_img.astype('int16')
             cv2.imwrite(os.path.join(res_path,out_file), curr_img)
+        np.save(os.path.join(res_path, "abs_diff.npy"), self.diff)
             
         with open (os.path.join(res_path, "info.txt"), 'w') as f:
             f.write(self.data_str)
@@ -152,12 +152,25 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     det = Adversary_Details(args["image"], args["path"])
     attack_dict = det.get_attacks()
-    
-    with tf.Session() as session:
-        for curr_attack in ["FGSM", "BIM", "PGD", "NewtonFoolAttack"]:
-            det.reset(curr_attack)
-            det.make_attack()
-            det.make_histogram(curr_attack)
-            det.save_results(curr_attack)
+    attack_list = sorted(attack_dict.keys())
+    num_attacks = len(attack_dict)
+
+    with open("tracker.txt","w") as f:
+        for ctr, curr_attack in enumerate(attack_list[5:]): #["FGSM", "BIM", "PGD", "NewtonFoolAttack"]:
+            with tf.Session() as session:
+        
+                try:
+                    out_string = curr_attack + ": " + str(ctr) + " of " + str(num_attacks) + " ..... "
+                    f.write (out_string)
+                    f.flush()
+                    det.reset(curr_attack)
+                    det.make_attack()
+                    det.make_histogram(curr_attack)
+                    det.save_results(curr_attack)
+                    f.write("OK\n")
+                    f.write(det.data_str + '\n')
+                except:
+                    f.write("FAILED\n\n")
+                f.flush()
 
 
