@@ -183,7 +183,7 @@ if __name__ == "__main__":
         start_time = time.time()
         action_process = Process(target=run_it, args=(det, args["attack"], f))
         action_process.start()
-        action_process.join(timeout=60)
+        action_process.join(timeout=args['time'])
 
         # We terminate the process.
         if action_process.is_alive():
