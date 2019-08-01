@@ -156,7 +156,8 @@ if __name__ == "__main__":
     num_attacks = len(attack_dict)
 
     with open("tracker.txt","w") as f:
-        for ctr, curr_attack in enumerate(attack_list[5:]): #["FGSM", "BIM", "PGD", "NewtonFoolAttack"]:
+        sys.stderr = f
+        for ctr, curr_attack in enumerate(attack_list): #["FGSM", "BIM", "PGD", "NewtonFoolAttack"]:
             with tf.Session() as session:
         
                 try:
