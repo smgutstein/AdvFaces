@@ -144,7 +144,7 @@ class Adversary_Details(object):
 
 def run_it(adversary, curr_attack, f):
     
-        sys.stderr = f
+        #sys.stderr = f
         with tf.Session() as session:
             try:
                 out_string = curr_attack + ": " +  " ..... "
@@ -157,7 +157,7 @@ def run_it(adversary, curr_attack, f):
                 f.write("OK\n")
                 f.write(adversary.data_str + '\n')
             except:
-                f.write("FAILED\n\n")
+                f.write("FAILED\n")
             f.flush()
 
 
@@ -200,3 +200,4 @@ if __name__ == "__main__":
         f.write("Elapsed Time: {0} hours {1} mins {2:.2f} secs\n\n".format(delta_hours,
                                                                     delta_mins,
                                                                     delta_secs))
+        f.write("-------------------------------------------------\n\n")
