@@ -37,7 +37,7 @@ class Adversary_Details(object):
 
         self.model = foolbox.models.TensorFlowModel(self.images,
                                                     self.vgg16_net.fc8,
-                                                    (0, 255),
+                                                    (0, 1),
                                                     self.vgg16_net)
         self.attack = self.poss_attacks[curr_attack](self.model)
         self.data_str = ""

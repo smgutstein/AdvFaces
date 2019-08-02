@@ -110,7 +110,7 @@ if __name__ == "__main__":
     with tf.Session() as session:
         model = foolbox.models.TensorFlowModel(detailer.images,
                                                detailer.vgg16_net.fc8,
-                                               (0, 255),
+                                               (0,1.0),
                                                detailer.vgg16_net)
         
         attack = detailer.attack_class(model) 
@@ -120,7 +120,6 @@ if __name__ == "__main__":
         idx = np.argmax(conf)
         category = ' '.join(detailer.synset[idx].split()[1:])
 
-
         adv_image = attack(detailer.image, idx)
         pre_softmax2 = model.forward_one(adv_image)
         conf2 = foolbox.utils.softmax(pre_softmax2)
@@ -128,7 +127,7 @@ if __name__ == "__main__":
         category2 = ' '.join(detailer.synset[idx2].split()[1:])
  
         diff = np.abs(detailer.image-adv_image)
-        hist_image = 255.0 * diff
+        hist_image = diff * 255.0
         hist_image = hist_image.astype('int16')
         hist = hist_image.flatten()
         hist_max = (int(hist.max()/10)+1)*10

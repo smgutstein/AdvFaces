@@ -4,14 +4,16 @@ import foolbox.foolbox as foolbox
 import importlib
 import inspect
 import matplotlib.pyplot as plt
+from multiprocessing import Process
 import numpy as np
 import os
 from PIL import Image
 import skimage
 import sys
 import tensorflow as tf
-from tensorflow.contrib.slim.nets import vgg
+#from tensorflow.contrib.slim.nets import vgg
 from tensorflow_vgg.vgg16 import Vgg16
+import time
 
 
 class Adversary_Details(object):
@@ -142,38 +144,52 @@ class Adversary_Details(object):
     def change_alpha(self, alpha):
         self.alpha = alpha/100.0
 
+def run_it(adversary, curr_attack, f):
+    
+        #sys.stderr = f
+        with tf.Session() as session:
+            try:
+                out_string = curr_attack + ": " +  " ..... "
+                f.write (out_string)
+                f.flush()
+                adversary.reset(curr_attack)
+                adversary.make_attack()
+                adversary.make_histogram(curr_attack)
+                adversary.save_results(curr_attack)
+                f.write("OK\n")
+                f.write(adversary.data_str + '\n')
+            except:
+                f.write("FAILED\n")
+            f.flush()
 
-        
+
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test foolbox")
     parser.add_argument("-p", "--path",
                         default= "./test_data/")
     parser.add_argument("-i", "--image", type=str,
                         default="tiger.jpeg")
+    parser.add_argument("-a", "--attack", type=str,
+                        default="FGSM") 
+ 
  
     args = vars(parser.parse_args())
     det = Adversary_Details(args["image"], args["path"])
-    attack_dict = det.get_attacks()
-    attack_list = sorted(attack_dict.keys())
-    num_attacks = len(attack_dict)
 
-    with open("tracker.txt","w") as f:
-        sys.stderr = f
-        for ctr, curr_attack in enumerate(attack_list): #["FGSM", "BIM", "PGD", "NewtonFoolAttack"]:
-            with tf.Session() as session:
+    #run_it(det, args["attack"])
+    with open("tracker_indivs.txt","a") as f:
+
+        start_time = time.time()
+        run_it(det, args["attack"], f)
+        stop_time = time.time()
         
-                try:
-                    out_string = curr_attack + ": " + str(ctr) + " of " + str(num_attacks) + " ..... "
-                    f.write (out_string)
-                    f.flush()
-                    det.reset(curr_attack)
-                    det.make_attack()
-                    det.make_histogram(curr_attack)
-                    det.save_results(curr_attack)
-                    f.write("OK\n")
-                    f.write(det.data_str + '\n')
-                except:
-                    f.write("FAILED\n\n")
-                f.flush()
-
-
+        delta_time = stop_time - start_time
+        delta_hours = delta_time // 3600
+        temp = delta_time - 3600*delta_hours
+        delta_mins = temp // 60
+        delta_secs = temp - 60*delta_mins
+        f.write("Elapsed Time: {0} hours {1} mins {2:.2f} secs\n\n".format(delta_hours,
+                                                                    delta_mins,
+                                                                    delta_secs))
+        f.write("-------------------------------------------------\n\n")
