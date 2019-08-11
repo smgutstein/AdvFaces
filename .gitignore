@@ -1,2 +1,7 @@
 /test_data
 *pyc
+/results
+.ipynb_checkpoints
+Untitled*
+*txt
+*png

@@ -70,12 +70,12 @@ class Adversary_Details(object):
 
 
     def make_histogram(self, curr_attack):
-        self.hist_image = 255.0 * self.diff
-        self.hist_image = self.hist_image.astype('int16')
-        hist = self.hist_image.flatten()
-        hist_max = (int(hist.max()/10)+1)*10
+        self.hist_array = 255.0 * self.diff
+        self.hist_array = self.hist_array.astype('int16')
+        self.hist = self.hist_array.flatten()
+        hist_max = (int(self.hist.max()/10)+1)*10
         hist_name = curr_attack + " Histogram"
-        plt.hist(hist, range(hist_max))
+        plt.hist(self.hist, range(hist_max))
         plt.yscale('log')
         plt.xlabel("Diff")
         plt.ylabel('Count')
@@ -98,7 +98,7 @@ class Adversary_Details(object):
                 curr_img = 255.0 * curr_img
             curr_img = curr_img.astype('int16')
             cv2.imwrite(os.path.join(res_path,out_file), curr_img)
-        np.save(os.path.join(res_path, "abs_diff.npy"), self.diff)
+        np.save(os.path.join(res_path, "abs_diff.npy"), self.hist)
             
         with open (os.path.join(res_path, "info.txt"), 'w') as f:
             f.write(self.data_str)
